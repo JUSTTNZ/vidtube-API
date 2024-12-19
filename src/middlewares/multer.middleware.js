@@ -11,4 +11,4 @@ const storage = multer.diskStorage({
     }
   })
   
-  const upload = multer({ storage: storage }) //what the diference between const upload = multer({ storage: storage }) and const upload = multer({ storage })
+ export const upload = multer({ storage, }) //what the diference between const upload = multer({ storage: storage }) and const upload = multer({ storage })
