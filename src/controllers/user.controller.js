@@ -385,8 +385,22 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                             if: {
                                 $in: [req.user?._id, "$subscribers, subscriber"]
                             },
+                            then: true,
+                            else: false
                         }
                     }
+                }
+            },
+            {
+                 // project only the necessary data
+                $project: {
+                    fullname: 1,
+                    username: 1,
+                    avatar: 1,
+                    subscribersCount: 1,
+                    isSubscribed: 1,
+                    coverImage: 1,
+                    email: 1
                 }
             }
         ]
