@@ -4,6 +4,7 @@ import { User } from "../models/user.models.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
 import  jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -124,7 +125,7 @@ const loginUser = asyncHandler( async (req, res) => {
     }
 
     const user = await User.findOne({
-        $or: [{username, password}]
+        $or: [{username}, {email}]
     })
 
     if(!user) {
@@ -348,7 +349,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
     if(!username?.trim) {
         throw new ApiError(400, "username is required")
     }
-
+    console.log(channel);
     const channel = await User.aggregate(
         [
             {
@@ -403,17 +404,78 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                     email: 1
                 }
             }
-        ]
+        ],
     )
+
+    if(!channel?.length) {
+        throw new ApiError(404, "Channel not found")
+    }
+    
+
+    return res.status(200).json(new ApiResponse(
+        200,
+        channel[0],
+        "Channel profile successfully"
+    ))
+    
 })
 
-// const getUserChannelProfile = asyncHandler(async(req, res) => {
-    
-// })
+const getWatchHistory = asyncHandler(async(req, res) => {
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullname: 1,
+                                        username: 1,
+                                        avatar: 1,
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+    if (!user.length) {
+        throw new ApiError(404, "User not found");
+    }
+
+    return res.status(200).json(new ApiResponse(
+        200, 
+        user[0]?.watchHistory, 
+        "Watch history retrieved successfully"));
+})
 
 export { 
     registerUser,
     loginUser, 
+    getWatchHistory,
     refreshAccessToken, 
     logOutUser, 
     changeCurrentPassword,
