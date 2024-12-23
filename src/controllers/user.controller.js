@@ -116,10 +116,12 @@ const registerUser = asyncHandler( async (req, res) => {
 const loginUser = asyncHandler( async (req, res) => {
     // get data from body
     const {email, username, password} = req.body
+    console.log(email, password);
+    
 
     //validation
     if(
-        [email, username, password].some((field) => field?.trim() === "" )
+        [email, username, password].some((field) => typeof field !== 'string' || field.trim() === "")
     ){
         throw new ApiError(400, "All fields are required")
     }
@@ -133,12 +135,19 @@ const loginUser = asyncHandler( async (req, res) => {
     }
 
     try {
-        validatePassword = await user.isPasswordCorrect(password)
+        console.log("Provided password:", password);
+        console.log("Stored hashed password:", user.password);
+        const validatePassword = await user.isPasswordCorrect(password);
+        console.log("Password validation result:", validatePassword);
 
-        if(!validatePassword) {
-            throw new ApiError(401, "Invalid credentials")
+        if (!validatePassword) {
+            throw new ApiError(401, "Invalid credentials");
         }
+    } catch (error) {
+        throw new ApiError(500, "Error validating password", error);
+    }
 
+    try {
         const {accessToken, refreshToken} = await generateAccessAndRefreshToken(user._id)
 
         const loggedInUser = await User.findById(user._id)
@@ -164,7 +173,7 @@ const loginUser = asyncHandler( async (req, res) => {
         ))
 
     } catch (error) {
-        console.log("User logged in failed");
+        console.log("User logged in failed", error);
         
     }
 })
