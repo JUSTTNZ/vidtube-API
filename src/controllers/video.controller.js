@@ -6,21 +6,44 @@ import {ApiResponse} from "../utils/apiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 
-const getAllVideo = asyncHandler(async( req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortBy, userId} = req.query
+const getAllVideos = asyncHandler(async( req, res) => {
+    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
 
-    
+    const filter = {}
+    if (query) {
+        filter.title = { $regex: query, $options: 'i' }
+    }
+    if (userId) {
+        filter.userId = userId
+    }
 
+    const sortOptions = {}
+    if (sortBy) {
+        const [key, order] = sortBy.split(':')
+        sortOptions[key] = order === 'desc' ? -1 : 1
+    }
+
+    const videos = await Video.find(filter)
+        .sort(sortOptions)
+        .skip((page - 1) * limit)
+        .limit(Number(limit))
+
+    const totalVideos = await Video.countDocuments(filter)
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, { videos, totalVideos }, "videos retrieved successfully"))
 })
+
 const publishAVideo = asyncHandler(async( req, res) => {
     const {title, description} = req.body
 
     const videoLocalPath = req.file?.video[0]?.path
 
-    let videoFiles;
+    let videoFile;
 
     try {
-        videoFiles = await uploadOnCloudinary(videoLocalPath)
+        videoFile = await uploadOnCloudinary(videoLocalPath)
         console.log("Video uploaded on cloudinary");
 
         const video = await Video.create({
@@ -128,9 +151,8 @@ const deleteVideo = asyncHandler(async(req, res) => {
     }
 })
 
-
-
 export {
+    getAllVideos,
     publishAVideo,
     getVideoById,
     updateVideo,
