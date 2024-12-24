@@ -41,20 +41,33 @@ const getAllVideos = asyncHandler(async( req, res) => {
 const publishAVideo = asyncHandler(async( req, res) => {
     const { title, description, userId } = req.body
 
-    const videoLocalPath = req.file?.video[0]?.path
-    
+    const videoLocalPath = req.files.videoFile?.[0]?.path
+
+    if(!videoLocalPath) {
+        throw new ApiError(404, "video file does not exist")
+    }
+
+     let videoFile
     try {
-        const uploadedVideo = await uploadOnCloudinary(videoLocalPath)
-        console.log("Video uploaded on cloudinary");
+        videoFile = await uploadOnCloudinary(videoLocalPath)
+        console.log("Video uploaded on cloudinary", videoFile);
+        }catch{
+            throw new ApiError(404, "couldn't upload video on cloudinary")
+        }
+
+        if (!videoFile || !videoFile.url) {
+            throw new ApiError(500, "Invalid response from Cloudinary");
+        }
 
         const user = await User.findById(userId)
         if (!user) {
             throw new ApiError(404, "User not found")
         }
-
+        try{
         const video = await Video.create({
             title,
             description,
+            videoFile: videoFile.url,
             userId: user._id
         })
     
@@ -72,10 +85,7 @@ const publishAVideo = asyncHandler(async( req, res) => {
         console.log("Error uploading video", error);
         
         throw new ApiError(500, "Failed to upload video");
-    } finally {
-        await mongoose.connection.close()
-        console.log("Disconnected from MongoDB");
-    }
+    } 
 })
 
 const getVideoById = asyncHandler(async( req, res) => {
