@@ -42,14 +42,9 @@ const publishAVideo = asyncHandler(async( req, res) => {
     const { title, description, userId } = req.body
 
     const videoLocalPath = req.file?.video[0]?.path
-
-    let videoFile;
-
+    
     try {
-        await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-        console.log("Connected to MongoDB");
-
-        videoFile = await uploadOnCloudinary(videoLocalPath)
+        const uploadedVideo = await uploadOnCloudinary(videoLocalPath)
         console.log("Video uploaded on cloudinary");
 
         const user = await User.findById(userId)
