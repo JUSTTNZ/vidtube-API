@@ -7,48 +7,60 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 
 const getAllVideos = asyncHandler(async( req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const { page = 1, limit = 10, query, sortBy= 'asc', sortType= 'title', userId } = req.query
 
     const filter = {}
-    if (query) {
-        filter.title = { $regex: query, $options: 'i' }
+
+    try {
+        if (query) {
+            filter.title = { $regex: query, $options: 'i' }
+        }
+        if (userId) {
+            filter.userId = userId
+        }
+    
+        const sortOptions = { [sortType] : sortBy === "desc" ? -1 : 1}
+        
+    
+        const videos = await Video.find(filter)
+            .sort(sortOptions)
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
+    
+        const totalVideos = await Video.countDocuments(filter)
+    
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { videos, totalVideos }, "videos retrieved successfully"))
+    } catch (error) {
+        throw new ApiError(500, "failed to get videos")
     }
-    if (userId) {
-        filter.userId = userId
-    }
-
-    const sortOptions = {}
-    if (sortBy) {
-        const [key, order] = sortBy.split(':')
-        sortOptions[key] = order === 'desc' ? -1 : 1
-    }
-
-    const videos = await Video.find(filter)
-        .sort(sortOptions)
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-
-    const totalVideos = await Video.countDocuments(filter)
-
-    return res
-        .status(200)
-        .json(new ApiResponse(200, { videos, totalVideos }, "videos retrieved successfully"))
+    
 })
 
 const publishAVideo = asyncHandler(async( req, res) => {
-    const {title, description} = req.body
+    const { title, description, userId } = req.body
 
     const videoLocalPath = req.file?.video[0]?.path
 
     let videoFile;
 
     try {
+        await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+        console.log("Connected to MongoDB");
+
         videoFile = await uploadOnCloudinary(videoLocalPath)
         console.log("Video uploaded on cloudinary");
 
+        const user = await User.findById(userId)
+        if (!user) {
+            throw new ApiError(404, "User not found")
+        }
+
         const video = await Video.create({
             title,
-            description
+            description,
+            userId: user._id
         })
     
         const createdVideo = await Video.findById(video._id)
@@ -65,11 +77,18 @@ const publishAVideo = asyncHandler(async( req, res) => {
         console.log("Error uploading video", error);
         
         throw new ApiError(500, "Failed to upload video");
+    } finally {
+        await mongoose.connection.close()
+        console.log("Disconnected from MongoDB");
     }
 })
 
 const getVideoById = asyncHandler(async( req, res) => {
     const { videoId } = req.params
+
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video ID")
+    }
 
     const video = await Video.findById(videoId)
 
@@ -151,10 +170,32 @@ const deleteVideo = asyncHandler(async(req, res) => {
     }
 })
 
+const togglePublishStatus = asyncHandler(async(req, res) =>  {
+    const { videoId } = req.params
+
+    try {
+        const video = await Video.findById(videoId)
+
+    if(!video) {
+        throw new ApiError(400, "video not found")
+    }
+
+    video.isPublished = !video.isPublished
+
+    return res 
+        .status(200)
+        .json( new ApiResponse(200,video, "video publish status updated successfully"))
+
+    } catch (error) {
+        throw new ApiError(400, "couldn't update publish status")
+    }
+})
+
 export {
     getAllVideos,
     publishAVideo,
     getVideoById,
     updateVideo,
-    deleteVideo
+    deleteVideo,
+    togglePublishStatus
 }
