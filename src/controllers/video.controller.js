@@ -4,7 +4,7 @@ import {User} from "../models/user.models.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/apiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
-import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
+import {uploadOnCloudinary, deleteFromCloudinary} from "../utils/cloudinary.js"
 
 const getAllVideos = asyncHandler(async( req, res) => {
     const { page = 1, limit = 10, query, sortBy= 'asc', sortType= 'title', userId } = req.query
@@ -146,7 +146,8 @@ const updateVideo = asyncHandler(async(req, res) => {
 const deleteVideo = asyncHandler(async(req, res) => {
     const { videoId } = req.params
 
-    const videoPath = req.file?.path
+    const videoPath = req.body
+    console.log("Received videoPath:", videoPath);
 
     if(!videoPath) {
         throw new ApiError(500, "video path required")
@@ -158,7 +159,7 @@ const deleteVideo = asyncHandler(async(req, res) => {
         videoFile = await deleteFromCloudinary(videoPath)
 
        if(!videoFile) {
-            throw new ApiError(200, "Error deleting video")
+            throw new ApiError(500, "Error deleting video")
        }
 
        const video = await Video.findByIdAndDelete(videoId)
@@ -171,13 +172,15 @@ const deleteVideo = asyncHandler(async(req, res) => {
         .status(200)
         .json(200, {}, "Video deleted successfully")
     } catch (error) {
-        throw new ApiError(500, "Video deleting process failed")
+        console.log(error);
+        
+        throw new ApiError(400, "Video deleting process failed")
     }
 })
 
 const togglePublishStatus = asyncHandler(async(req, res) =>  {
     const { videoId } = req.params
-
+    
     try {
         const video = await Video.findById(videoId)
 
@@ -186,13 +189,14 @@ const togglePublishStatus = asyncHandler(async(req, res) =>  {
     }
 
     video.isPublished = !video.isPublished
+    await video.save();
 
     return res 
         .status(200)
         .json( new ApiResponse(200,video, "video publish status updated successfully"))
 
     } catch (error) {
-        throw new ApiError(400, "couldn't update publish status")
+        throw new ApiError(400, "couldn't update publish status", error)
     }
 })
 

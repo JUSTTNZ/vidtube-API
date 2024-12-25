@@ -15,7 +15,7 @@ const router = Router();
 router.use(verifyJWT);
 
 router.route("/").get(getAllVideos)
-router.route("/").post(
+router.route("/publishAVideo").post(
     upload.fields([
         {
             name: "videoFile",
