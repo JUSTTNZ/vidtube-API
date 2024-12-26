@@ -21,8 +21,7 @@ const createTweet = asyncHandler(async(req, res) => {
     
         const tweetContent = await Tweet.create({
             content,
-            userId: user._id,
-            owner: user._id
+            owner: userId,
         })
 
         const createdTweet = await Tweet.findById(tweetContent._id).populate('owner', 'username')
@@ -30,6 +29,8 @@ const createTweet = asyncHandler(async(req, res) => {
         if(!createdTweet) {
             throw new ApiError(404, "something went wrong while creating tweet")
         }
+
+        // await createdTweet.save()
 
         return res
             .status(200)
@@ -53,7 +54,8 @@ const getUserTweets = asyncHandler(async(req, res) => {
             throw new ApiError(404, "user not found, please input a valid userID")
         }
     
-        const userTweets = await Tweet.find({ userId })
+        const userTweets = await Tweet.find({owner: userId})
+        console.log(userTweets);
 
         if(userTweets.length === 0) {
             throw new ApiError(404, "user does not have any tweet")
@@ -63,6 +65,8 @@ const getUserTweets = asyncHandler(async(req, res) => {
             .status(200)
             .json(new ApiResponse(201, userTweets, "user tweets loaded successfully"))
     } catch (error) {
+        console.log(error);
+        
         throw new ApiError(402, "Process failed")
     }
 })
@@ -82,6 +86,16 @@ const updateTweet =  asyncHandler(async(req, res) => {
     }
 
     try {
+        const oldTweetArray = []
+        const oldTweet = await Tweet.findById(tweetId)
+
+        oldTweetArray.push(oldTweet)
+        console.log(oldTweetArray);
+        
+
+        if(!oldTweet) {
+            throw new ApiError(400, "Old tweet not found")
+        }
         const updatedTweet = await Tweet.findByIdAndUpdate(tweetId, 
             {
                 $set: {
@@ -97,7 +111,7 @@ const updateTweet =  asyncHandler(async(req, res) => {
 
         return res
             .status(200)
-            .json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"))
+            .json(new ApiResponse(200, {oldTweet, updatedTweet}, "Tweet updated successfully"))
     } catch (error) {
         console.log("Error occurred in the updating process", error);
         throw new ApiError(400, "Error occurred updating tweet")
