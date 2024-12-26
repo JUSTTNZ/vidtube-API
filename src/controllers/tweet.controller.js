@@ -1,5 +1,5 @@
 import {isValidObjectId} from "mongoose"
-import {Tweet} from "../models/video.models.js"
+import {Tweet} from "../models/tweet.models.js"
 import {User} from "../models/user.models.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/apiResponse.js"
@@ -42,6 +42,10 @@ const createTweet = asyncHandler(async(req, res) => {
 const getUserTweets = asyncHandler(async(req, res) => {
     const {userId} = req.params
 
+    if(!isValidObjectId(userId)) {
+        throw new ApiError(404, "Invalid userID")
+    }
+
     try {
         const user = await User.findById(userId)
     
@@ -64,16 +68,69 @@ const getUserTweets = asyncHandler(async(req, res) => {
 })
 
 const updateTweet =  asyncHandler(async(req, res) => {
-    const {userId} = req.params
+    const {tweetId} = req.params
 
-    if(!userId) {
-        throw new ApiError(404, "userId is invalid")
+
+    if(!tweetId) {
+        throw new ApiError(404, "tweetId is invalid")
     }
 
-    const user
+    const { content } = req.body
+
+    if(!content === "") {
+        throw new ApiError(401, "content field required")
+    }
+
+    try {
+        const updatedTweet = await Tweet.findByIdAndUpdate(tweetId, 
+            {
+                $set: {
+                    content:content
+                }
+            },
+            {new: true}
+        )
+
+        if(!updatedTweet) {
+            throw new ApiError(404, "Error updating old tweet")
+        }
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"))
+    } catch (error) {
+        console.log("Error occurred in the updating process", error);
+        throw new ApiError(400, "Error occurred updating tweet")
+    }
+})
+
+const deleteTweet = asyncHandler(async(req, res) => {
+    const {tweetId} = req.params
+
+    if(!isValidObjectId(tweetId)) {
+        throw new ApiError(401, "Deleting tweet requires tweetId")
+    }
+
+    try {
+        const deletedTweet = await Tweet.findByIdAndDelete(tweetId)
+
+        if(!deletedTweet) {
+            throw new ApiError(401, "Error deleting tweet")
+        }
+
+        return res
+            .status(200)
+            .json(new ApiResponse(201, {}, "Tweet deleted successfully"))
+
+    } catch (error) {
+        console.log("Cant delete tweet",error);
+        throw new ApiError(400, "Error occurred")
+    }
 })
 
 export {
     createTweet,
     getUserTweets,
+    updateTweet,
+    deleteTweet
 }
