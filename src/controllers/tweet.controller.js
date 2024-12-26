@@ -63,6 +63,16 @@ const getUserTweets = asyncHandler(async(req, res) => {
     }
 })
 
+const updateTweet =  asyncHandler(async(req, res) => {
+    const {userId} = req.params
+
+    if(!userId) {
+        throw new ApiError(404, "userId is invalid")
+    }
+
+    const user
+})
+
 export {
     createTweet,
     getUserTweets,
