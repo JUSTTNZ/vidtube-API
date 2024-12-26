@@ -21,7 +21,7 @@ const videoSchema = new Schema(
         },
         thumbnail: {
             type: String,
-            // required: true,
+            required: true,
         },
         title: {
             type: String,
@@ -35,9 +35,13 @@ const videoSchema = new Schema(
             type: Number,
             default: 0
         },
+        likes: {
+            type: Number,
+            default: 0
+        },
         duration: {
             type: Number,
-            // required: true
+            required: true
         },
         isPublished: {
             type:  Boolean,

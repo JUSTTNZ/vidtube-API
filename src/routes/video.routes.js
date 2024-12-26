@@ -21,12 +21,16 @@ router.route("/publishAVideo").post(
             name: "videoFile",
             maxCount: 1,
         },
+        {
+            name: "thumbnail",
+            maxCount: 1,
+        }
     ]),
     publishAVideo
 );
 
 router.route("/:videoId").get(getVideoById);
-router.route("/:videoId").delete(deleteVideo);
+router.route("/delete/:videoId").delete(deleteVideo);
 router.route("/:videoId").patch(upload.single("thumbnail"), updateVideo);
 router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
 

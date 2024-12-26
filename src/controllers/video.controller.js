@@ -39,10 +39,11 @@ const getAllVideos = asyncHandler(async( req, res) => {
 })
 
 const publishAVideo = asyncHandler(async( req, res) => {
-    const { title, description, userId } = req.body
+    const { title, description, duration, views, likes, userId, owner } = req.body
 
     const videoLocalPath = req.files.videoFile?.[0]?.path
-
+    const thumbNailLocalPath = req.files.thumbnail?.[0]?.path
+    
     if(!videoLocalPath) {
         throw new ApiError(404, "video file does not exist")
     }
@@ -51,27 +52,57 @@ const publishAVideo = asyncHandler(async( req, res) => {
     try {
         videoFile = await uploadOnCloudinary(videoLocalPath)
         console.log("Video uploaded on cloudinary", videoFile);
-        }catch{
-            throw new ApiError(404, "couldn't upload video on cloudinary")
-        }
+    }catch{
+        throw new ApiError(404, "couldn't upload video on cloudinary")
+    }
 
         if (!videoFile || !videoFile.url) {
             throw new ApiError(500, "Invalid response from Cloudinary");
         }
 
+        
+
+        if(!thumbNailLocalPath) {
+            throw new ApiError(404, "thumbnail file does not exist")
+        }
+
+    
+        let thumbnail
+        try {
+            thumbnail = await uploadOnCloudinary(thumbNailLocalPath)
+            console.log("thumbnail uploaded on cloudinary", thumbnail);
+        }catch{
+            throw new ApiError(404, "couldn't upload thumbnail on cloudinary")
+        }
+    
+            if (!thumbnail || !thumbnail.url) {
+                throw new ApiError(500, "Invalid response from Cloudinary");
+            }
+
         const user = await User.findById(userId)
         if (!user) {
             throw new ApiError(404, "User not found")
         }
+
+        // Convert duration from "HH:MM" format to total minutes
+        const [hours, minutes] = duration.split(':').map(Number);
+        const totalDuration = (hours * 60) + minutes;
+
         try{
         const video = await Video.create({
             title,
             description,
             videoFile: videoFile.url,
-            userId: user._id
+            thumbnail: thumbnail.url,
+            userId: user._id,
+            owner: user._id,
+            views,
+            duration: totalDuration,
+            likes,
         })
     
-        const createdVideo = await Video.findById(video._id)
+
+        const createdVideo = await Video.findById(video._id).populate('owner', 'username')
     
         if(!createdVideo) {
             throw new ApiError(500, "something went wrong while uploading the video")
@@ -143,40 +174,42 @@ const updateVideo = asyncHandler(async(req, res) => {
     }
 })
 
-const deleteVideo = asyncHandler(async(req, res) => {
-    const { videoId } = req.params
+const deleteVideo = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
 
-    const videoPath = req.body
-    console.log("Received videoPath:", videoPath);
-
-    if(!videoPath) {
-        throw new ApiError(500, "video path required")
+    const video = await Video.findById(videoId);
+    if (!video) {
+        throw new ApiError(404, "Video not found");
     }
 
-    let videoFile
+    const videoFileUrl = video.videoFile;
+    const thumbnailUrl = video.thumbnail;
+
     try {
+        if (videoFileUrl) {
+            await deleteFromCloudinary(videoFileUrl);
+            console.log("Video deleted from Cloudinary:", videoFileUrl);
+        } else {
+            console.log("Error deleting video: videoFileUrl is not defined");
+        }
 
-        videoFile = await deleteFromCloudinary(videoPath)
+        if (thumbnailUrl) {
+            await deleteFromCloudinary(thumbnailUrl);
+            console.log("Thumbnail deleted from Cloudinary:", thumbnailUrl);
+        } else {
+            console.log("Error deleting thumbnail: thumbnailUrl is not defined");
+        }
 
-       if(!videoFile) {
-            throw new ApiError(500, "Error deleting video")
-       }
+        await Video.findByIdAndDelete(videoId);
 
-       const video = await Video.findByIdAndDelete(videoId)
-
-       if(!video) {
-            throw new ApiError(500, "Couldn't delete video")
-       }
-
-       return res
-        .status(200)
-        .json(200, {}, "Video deleted successfully")
+        return res
+            .status(200)
+            .json(new ApiResponse(200, null, "Video deleted successfully"));
     } catch (error) {
-        console.log(error);
-        
-        throw new ApiError(400, "Video deleting process failed")
+        console.error("Error deleting video:", error);
+        throw new ApiError(500, "Failed to delete video");
     }
-})
+});
 
 const togglePublishStatus = asyncHandler(async(req, res) =>  {
     const { videoId } = req.params
