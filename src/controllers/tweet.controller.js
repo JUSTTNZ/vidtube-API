@@ -86,10 +86,10 @@ const updateTweet =  asyncHandler(async(req, res) => {
     }
 
     try {
-        const oldTweetArray = []
+       
         const oldTweet = await Tweet.findById(tweetId)
 
-        oldTweetArray.push(oldTweet)
+        const oldTweetArray = [oldTweet]
         console.log(oldTweetArray);
         
 
@@ -108,6 +108,8 @@ const updateTweet =  asyncHandler(async(req, res) => {
         if(!updatedTweet) {
             throw new ApiError(404, "Error updating old tweet")
         }
+
+        const allTweet = [...oldTweetArray, updatedTweet]
 
         return res
             .status(200)
