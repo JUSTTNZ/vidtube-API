@@ -93,6 +93,10 @@ const updateTweet =  asyncHandler(async(req, res) => {
         console.log(oldTweetArray);
         
 
+=======
+        const oldTweet = await Tweet.findById(tweetId)
+
+>>>>>>> 594efc288705bf127b17b0bb3e45f79baf0130c4
         if(!oldTweet) {
             throw new ApiError(400, "Old tweet not found")
         }

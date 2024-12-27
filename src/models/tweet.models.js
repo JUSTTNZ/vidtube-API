@@ -11,7 +11,16 @@ const tweetSchema = new Schema (
         owner: {
             type: Schema.Types.ObjectId,
             ref: "User"
-        }
+        },
+        oldTweets: [
+            {
+                content: String,
+                updatedAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ],
     },
     { timestamps: true } 
 )
