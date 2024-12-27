@@ -23,35 +23,39 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         
         if(like) {
             let video = await Video.findByIdAndUpdate(videoId, {
-                $inc: {likes: -1}
+                $inc: {likes: 0}
             }, { new: true })
-            console.log("video unlike successfully");
-            
+            console.log("video unlike successfully", like)
+
             if(!video) {
                 throw new ApiError(404, "Video not found")
             }
+
+            return res
+                .status(200)
+                .json(new ApiResponse(200, {totalLikes: video.likes}, "video unliked successfully"))
+        } else {
+            like = new Like({
+                video: videoId,
+                likedBy: userId
+            })
+    
+            await like.save()
+    
+            let video = await Video.findByIdAndUpdate(videoId, {
+                $inc: {likes: 1}
+            }, { new: true })
+
+            if(!video) {
+                throw new ApiError(404, "Video not found")
+            }
+    
+            const populatedLike = await Like.findById(like._id).populate('likedBy', 'username')
+    
+            return res
+                .status(200)
+                .json(new ApiResponse(200, { like: populatedLike, totalLikes: video.likes }, "Video liked successfully"))
         }
-
-        like = new Like({
-            video: videoId,
-            likedBy: userId
-        })
-
-        await like.save()
-
-        let video = await Video.findByIdAndUpdate(videoId, {
-            $inc: {likes: 1}
-        }, { new: true })
-
-        if(!video) {
-            throw new ApiError(404, "Video not found")
-        }
-
-        const populatedLike = await Like.findById(like._id).populate('likedBy', 'username')
-
-        return res
-            .status(200)
-            .json(new ApiResponse(200, { like: populatedLike, totalLikes: video.likes }, "Video liked successfully"))
     } catch (error) {
         return res.status(500).json(new ApiError(500, "An error occurred while liking the video"))
     }
