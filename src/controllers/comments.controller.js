@@ -67,7 +67,9 @@ const addComment = asyncHandler(async(req, res) => {
     }
 })
 
-const updat
+const updateComment = asyncHandler(async(req, res) => {
+    
+})
 
 
 

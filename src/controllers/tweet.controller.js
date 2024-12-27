@@ -86,20 +86,18 @@ const updateTweet =  asyncHandler(async(req, res) => {
     }
 
     try {
-       
         const oldTweet = await Tweet.findById(tweetId)
 
-        const oldTweetArray = [oldTweet]
-        console.log(oldTweetArray);
-        
-
-=======
-        const oldTweet = await Tweet.findById(tweetId)
-
->>>>>>> 594efc288705bf127b17b0bb3e45f79baf0130c4
         if(!oldTweet) {
             throw new ApiError(400, "Old tweet not found")
         }
+        const oldTweetArray = []
+        const TweetArray = oldTweet.oldTweets.push({
+            content: oldTweet.content,
+            updatedAt: new Date()
+        })
+        oldTweetArray.push(TweetArray)  
+        await oldTweet.save();
         const updatedTweet = await Tweet.findByIdAndUpdate(tweetId, 
             {
                 $set: {
@@ -113,7 +111,9 @@ const updateTweet =  asyncHandler(async(req, res) => {
             throw new ApiError(404, "Error updating old tweet")
         }
 
-        const allTweet = [...oldTweetArray, updatedTweet]
+        const allTweet = [...oldTweetArray, updatedTweet] 
+        console.log(allTweet);
+        
 
         return res
             .status(200)
