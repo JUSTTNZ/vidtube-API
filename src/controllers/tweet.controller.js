@@ -111,7 +111,7 @@ const updateTweet =  asyncHandler(async(req, res) => {
             throw new ApiError(404, "Error updating old tweet")
         }
 
-        const allTweet = [oldTweetArray, updatedTweet] 
+        const allTweet = [...oldTweetArray, updatedTweet] 
         console.log("all tweet",allTweet);
         
         return res
