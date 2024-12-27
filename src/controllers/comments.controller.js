@@ -68,12 +68,61 @@ const addComment = asyncHandler(async(req, res) => {
 })
 
 const updateComment = asyncHandler(async(req, res) => {
-    
+    const {commentId} = req.params
+    const { content } = req.body
+if (!isValidObjectId(commentId)) {
+    throw new ApiError(404, "Invalid commentID")
+}
+
+try {
+    const comment = await Comment.findById(commentId)
+
+    if (!comment) {
+        throw new ApiError(404, "Comment not found")
+    }
+
+    comment.content = content
+    await comment.save()
+
+    const updatedComment = await Comment.findById(commentId).populate("owner", "username")
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updatedComment, "Comment updated successfully"))
+} catch (error) {
+    console.log("Error updating comment", error)
+    throw new ApiError(500, "Failed to update comment")
+}
 })
 
+const deleteComment = asyncHandler(async(req, res) => {
+    const {commentId} = req.params
 
+    if (!isValidObjectId(commentId)) {
+        throw new ApiError(404, "Invalid commentID")
+    }
+
+    try {
+        const comment = await Comment.findById(commentId)
+
+        if (!comment) {
+            throw new ApiError(404, "Comment not found")
+        }
+
+        await comment.remove()
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, null, "Comment deleted successfully"))
+    } catch (error) {
+        console.log("Error deleting comment", error)
+        throw new ApiError(500, "Failed to delete comment")
+    }
+})
 
 export {
     getVideoComment,
     addComment,
+    updateComment,
+    deleteComment
 }
