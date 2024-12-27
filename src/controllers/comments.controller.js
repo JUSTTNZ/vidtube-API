@@ -1,5 +1,7 @@
 import {isValidObjectId} from "mongoose"
 import {User} from "../models/user.models.js"
+import {Video} from "../models/video.models.js";
+import {Comment} from "../models/comment.models.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/apiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
@@ -28,11 +30,19 @@ const getVideoComment = asyncHandler(async(req, res) => {
 })
 
 const addComment = asyncHandler(async(req, res) => {
-    const {videoId} = req.params
-    const {userId} = req.body
+    // const {} = req.params
+    const {content, userId, videoId} = req.body
 
-    if(!isValidObjectId(videoId)) {
-        throw new ApiError(402, "Invalid videoID")
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(402, "Invalid videoID");
+    }
+
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(403, "Invalid userID");
+    }
+
+    if (!content) {
+        throw new ApiError(400, "Content field is required");
     }
 
     try{
@@ -43,9 +53,18 @@ const addComment = asyncHandler(async(req, res) => {
             throw new ApiError(403, "Invalid userID")
         }
 
+        const video = await Video.findById(videoId)
+
+        if(!video) {
+            throw new ApiError(403, "Video not found")
+        }
+
         const comment = await Comment.create({                                                                                      
             content: content,
-            owner: userId
+            owner: userId,
+            video: videoId,
+            videoTitle: video.title,
+            videoOwner: video.owner.username
         })
 
         if(!comment) {
@@ -75,6 +94,19 @@ if (!isValidObjectId(commentId)) {
 }
 
 try {
+
+    const oldComment = await Comment.findById(CommentId)
+
+    if(!oldComment) {
+        throw new ApiError(400, "Old Comment not found")
+    }
+    const oldCommentArray = []
+    const CommentArray = oldComment.oldComments.push({
+        content: oldComment.content,
+        updatedAt: new Date()
+    })
+    oldCommentArray.push(CommentArray)  
+    await oldComment.save();
     const comment = await Comment.findById(commentId)
 
     if (!comment) {
@@ -88,7 +120,7 @@ try {
 
     return res
         .status(200)
-        .json(new ApiResponse(200, updatedComment, "Comment updated successfully"))
+        .json(new ApiResponse(200, {oldComment,updatedComment}, "Comment updated successfully"))
 } catch (error) {
     console.log("Error updating comment", error)
     throw new ApiError(500, "Failed to update comment")
