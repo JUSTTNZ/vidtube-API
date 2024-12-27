@@ -87,44 +87,73 @@ const addComment = asyncHandler(async(req, res) => {
 })
 
 const updateComment = asyncHandler(async(req, res) => {
-    const {commentId} = req.params
-    const { content } = req.body
-if (!isValidObjectId(commentId)) {
-    throw new ApiError(404, "Invalid commentID")
-}
-
-try {
-
-    const oldComment = await Comment.findById(CommentId)
-
-    if(!oldComment) {
-        throw new ApiError(400, "Old Comment not found")
-    }
-    const oldCommentArray = []
-    const CommentArray = oldComment.oldComments.push({
-        content: oldComment.content,
-        updatedAt: new Date()
-    })
-    oldCommentArray.push(CommentArray)  
-    await oldComment.save();
-    const comment = await Comment.findById(commentId)
-
-    if (!comment) {
-        throw new ApiError(404, "Comment not found")
+    // const {} = req.params
+    const { userId, content, commentId, videoId } = req.body
+    if (!isValidObjectId(commentId)) {
+        throw new ApiError(404, "Invalid commentID")
     }
 
-    comment.content = content
-    await comment.save()
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(404, "Invalid videoID")
+    }
 
-    const updatedComment = await Comment.findById(commentId).populate("owner", "username")
+    if (content === "") {
+        throw new ApiError(404, "Content field is required")
+    }
 
-    return res
-        .status(200)
-        .json(new ApiResponse(200, {oldComment,updatedComment}, "Comment updated successfully"))
-} catch (error) {
-    console.log("Error updating comment", error)
-    throw new ApiError(500, "Failed to update comment")
-}
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(404, "Invalid videoID")
+    }
+
+    try {
+
+        const user = await User.findById(userId)
+
+        if(!user) {
+            throw new ApiError(403, "Invalid userID")
+        }
+
+        const video = await Video.findById(videoId)
+
+        if(!video) {
+            throw new ApiError(403, "Video not found")
+        }
+
+        const oldComment = await Comment.findById(commentId)
+
+        if(!oldComment) {
+            throw new ApiError(400, "Old Comment not found")
+        }
+        const oldCommentArray = []
+        const CommentArray = oldComment.oldComments.push({
+            content: oldComment.content,
+            updatedAt: new Date()
+        })
+        oldCommentArray.push(CommentArray)  
+        await oldComment.save();
+        const updatedComment = await Comment.findByIdAndUpdate(commentId, 
+                {
+                    $set: {
+                        content:content
+                    }
+                },
+                {new: true}
+            )
+    
+            if(!updatedComment) {
+                throw new ApiError(404, "Error updating old comment")
+            }
+    
+
+        const updatedComments = await Comment.findById(commentId).populate([{ path: 'owner', select: 'username' }, { path: 'video', select: 'title' }])
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, {oldComment,updatedComments}, "Comment updated successfully"))
+    } catch (error) {
+        console.log("Error updating comment", error)
+        throw new ApiError(500, "Failed to update comment")
+    }
 })
 
 const deleteComment = asyncHandler(async(req, res) => {
@@ -141,7 +170,7 @@ const deleteComment = asyncHandler(async(req, res) => {
             throw new ApiError(404, "Comment not found")
         }
 
-        await comment.remove()
+        // await comment.remove()
 
         return res
             .status(200)
