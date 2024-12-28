@@ -190,10 +190,10 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     }
 
     try {
-        const {videoId} = req.body
-        let likedVideos = await Like.find({videoIds: videoId, likedBy: userId}).populate([{path: 'likedBy', select: 'username'}, {path: 'video', select: 'title'}])
+        // const {videoId} = req.body
+        let likedVideos = await Like.find({likedBy: userId, video: { $ne: null }}).populate([{path: 'likedBy', select: 'username'}, {path: 'video', select: 'title'}])
 
-        if(!likedVideos) {
+        if(likedVideos === 0) {
             throw new ApiError(400, "user haven't liked any video")
         }
         
