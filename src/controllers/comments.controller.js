@@ -27,7 +27,10 @@ const getVideoComment = asyncHandler(async(req, res) => {
 
         return res
             .status(200)
-            .json(new ApiResponse(200, comment, "comment retrieved successfully"))
+            .json(new ApiResponse(200, {
+            videoOwner: video.owner.username,
+            comments: comments
+        }, "comment retrieved successfully"))
     } catch (error) {
         console.log("Error retrieving comment", error);
         throw new ApiError(500, "Failed to retrieve comment")
