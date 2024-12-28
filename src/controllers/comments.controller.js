@@ -14,6 +14,11 @@ const getVideoComment = asyncHandler(async(req, res) => {
     }
 
     try {
+        const video = await Video.findById(videoId).populate('owner', 'username');
+        
+        if (!video) {
+            throw new ApiError(404, "Video not found");
+       }
         const comment = await Comment.find({video: videoId}).populate('owner', 'username')
 
         if(!comment) {
