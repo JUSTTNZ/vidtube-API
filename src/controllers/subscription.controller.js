@@ -8,23 +8,22 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 
 const toggleSubscription = asyncHandler(async (req, res) => {
     const {channelId} = req.params
-    const subscriptionId = req.user._id
+    const subscriberId = req.user._id
 
     if(!isValidObjectId(channelId)) {
-        throw new Error(400,"invalid channelID, channel does exist");
+        throw new ApiError(400, "invalid channelID, channel does not exist");
     }
 
     if(!isValidObjectId(subscriberId)) {
-        throw new Error(400,"invalid user, user does not exist");
+        throw new ApiError(400, "invalid user, user does not exist");
     }
-
 
     // TODO: toggle subscription
     try {
         const existingSubscription = await Subscription.findOne({
             subscriber: subscriberId, 
-            channel:channelId
-        }).populate('channel, username')
+            channel: channelId
+        }).populate('channel', 'username')
 
         if(existingSubscription) {
             await Subscription.deleteOne({
@@ -44,42 +43,68 @@ const toggleSubscription = asyncHandler(async (req, res) => {
                 .status(200)
                 .json(new ApiResponse(201, existingSubscription, "unsubscribed to channel successfully"))
         } else {
-            const newSubscriber = Subscriber.create({
+            const newSubscription = await Subscription.create({
                 channel: channelId,
                 subscriber: subscriberId
             });
 
-            await Subscriber.updateMany(
+            await Subscription.updateMany(
                 {channel: channelId},
-                {$inc: {subscriberCount +1}}
+                {$inc: {subscriberCount: 1}}
             );
 
             await User.findByIdAndUpdate(subscriberId, {
-                {channel: channelId},
-                {$inc: {subscribedChannelCount +1}}
+                $inc: {subscribedChannelCount: 1}
             })
 
-            const populatedSubscription = newSubscriber.populate('channel', 'username').execPopulate();
+            const populatedSubscription = await newSubscription.populate('channel', 'username').execPopulate();
 
             return res
                 .status(200)
                 .json(new ApiResponse(201, populatedSubscription, "subscribed to channel successfully"))
         }
     } catch (error) {
-        
+        throw new Error(400,"cant toggle subscription");
+    }
+})
+
+const getUserChannelSubscribers = asyncHandler(async (req, res) => {
+    const { channelId } = req.params;
+
+    if (!isValidObjectId(channelId)) {
+        throw new ApiError(400, "Invalid channelID");
     }
 
-})
+    try {
+        const subscribers = await Subscription.find({ channel: channelId })
+            .populate('subscriber', 'username email');
 
-// controller to return subscriber list of a channel
-const getUserChannelSubscribers = asyncHandler(async (req, res) => {
-    const {channelId} = req.params
-})
+        return res
+            .status(200)
+            .json(new ApiResponse(200, subscribers, "Subscribers retrieved successfully"));
+    } catch (error) {
+        throw new ApiError(500, "Unable to retrieve subscribers");
+    }
+});
 
-// controller to return channel list to which user has subscribed
 const getSubscribedChannels = asyncHandler(async (req, res) => {
-    const { subscriberId } = req.params
-})
+    const subscriberId = req.user._id;
+
+    if (!isValidObjectId(subscriberId)) {
+        throw new ApiError(400, "Invalid subscriber ID");
+    }
+
+    try {
+        const subscriptions = await Subscription.find({ subscriber: subscriberId })
+            .populate('channel', 'username subscriberCount');
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, subscriptions, "Subscribed channels retrieved successfully"));
+    } catch (error) {
+        throw new ApiError(500, "Unable to retrieve subscribed channels");
+    }
+});
 
 export {
     toggleSubscription,
