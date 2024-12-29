@@ -68,7 +68,11 @@ const userSchema = new Schema (
                 type: Schema.Types.ObjectId,
                 ref: "User"
             }
-        ]
+        ],
+        subscribedChannelCount: {
+        type: Number,
+        default: 0,
+    },
     },
     { timestamps: true }
 )

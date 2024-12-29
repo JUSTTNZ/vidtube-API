@@ -21,51 +21,68 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     // TODO: toggle subscription
     try {
         const existingSubscription = await Subscription.findOne({
-            subscriber: subscriberId, 
-            channel: channelId
-        }).populate('channel', 'username')
-
-        if(existingSubscription) {
-            await Subscription.deleteOne({
-                _id: existingSubscription._id
-            })
-
+            subscriber: subscriberId,
+            channel: channelId,
+        }).populate('channel', 'username');
+    
+        if (existingSubscription) {
+            // Unsubscribe: Remove the subscription
+            await Subscription.deleteOne({ _id: existingSubscription._id });
+    
+            // Decrease subscriber count for the channel
             await Subscription.updateMany(
-                {channel: channelId},
-                {$inc: {subscriberCount: -1}}
-            )
-
+                { channel: channelId },
+                { $inc: { subscriberCount: -1 } }
+            );
+    
+            // Decrease subscribed channel count for the user
             await User.findByIdAndUpdate(subscriberId, {
-                $inc: {subscribedChannelCount: -1},
-            })
-
+                $inc: { subscribedChannelCount: -1 },
+                $pull: { subscribedTo: channelId }, // Remove channelId from subscribedTo
+            });
+    
+            // Remove subscriberId from the channel's subscribers array
+            await User.findByIdAndUpdate(channelId, {
+                $pull: { subscribers: subscriberId },
+            });
+    
             return res
                 .status(200)
-                .json(new ApiResponse(201, existingSubscription, "unsubscribed to channel successfully"))
+                .json(new ApiResponse(201, existingSubscription, "Unsubscribed from channel successfully"));
         } else {
+            // Subscribe: Add a new subscription
             const newSubscription = await Subscription.create({
                 channel: channelId,
-                subscriber: subscriberId
+                subscriber: subscriberId,
             });
-
+    
+            // Increase subscriber count for the channel
             await Subscription.updateMany(
-                {channel: channelId},
-                {$inc: {subscriberCount: 1}}
+                { channel: channelId },
+                { $inc: { subscriberCount: 1 } }
             );
-
+    
+            // Increase subscribed channel count for the user
             await User.findByIdAndUpdate(subscriberId, {
-                $inc: {subscribedChannelCount: 1}
-            })
-
+                $inc: { subscribedChannelCount: 1 },
+                $addToSet: { subscribedTo: channelId }, // Add channelId to subscribedTo
+            });
+    
+            // Add subscriberId to the channel's subscribers array
+            await User.findByIdAndUpdate(channelId, {
+                $addToSet: { subscribers: subscriberId },
+            });
+    
             const populatedSubscription = await newSubscription.populate('channel', 'username').execPopulate();
-
+    
             return res
                 .status(200)
-                .json(new ApiResponse(201, populatedSubscription, "subscribed to channel successfully"))
+                .json(new ApiResponse(201, populatedSubscription, "Subscribed to channel successfully"));
         }
     } catch (error) {
-        throw new Error(400,"cant toggle subscription");
+        throw new ApiError(500, "Cannot toggle subscription");
     }
+    
 })
 
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {

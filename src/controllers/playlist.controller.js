@@ -1,31 +1,31 @@
-import {isValidObjectId} from "mongoose"
-import {Playlist} from "../models/playlist.model.js"
-import {ApiError} from "../utils/ApiError.js"
-import {ApiResponse} from "../utils/ApiResponse.js"
-import {asyncHandler} from "../utils/asyncHandler.js"
+import { isValidObjectId } from "mongoose"
+import { Playlist } from "../models/playlist.model.js"
+import { ApiError } from "../utils/ApiError.js"
+import { ApiResponse } from "../utils/ApiResponse.js"
+import { asyncHandler } from "../utils/asyncHandler.js"
 
 
 const createPlaylist = asyncHandler(async (req, res) => {
     const { name, description } = req.body;
     const userId = req.user._id;
     try {
-        
+
         if (!name) {
             throw new ApiError(400, "Playlist name is required");
         }
-    
+
         const playlist = await Playlist.create({
             name,
             description,
             owner: userId,
             videos: [],
         });
-    
+
         return res
             .status(201)
             .json(new ApiResponse(201, playlist, "Playlist created successfully"));
     } catch (error) {
-        throw new ApiError(500, error.message);
+        throw new ApiError(500, `Failed to create playlist: ${error.message}`);
     }
 });
 
@@ -42,7 +42,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
             .status(200)
             .json(new ApiResponse(200, playlists, "User playlists fetched successfully"));
     } catch (error) {
-        throw new ApiError(500, error.message);
+        throw new ApiError(500, `Failed to fetch user playlists: ${error.message}`);
     }
 });
 
@@ -53,7 +53,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
             throw new ApiError(400, "Invalid playlist ID");
         }
 
-        const playlist = await Playlist.findById(playlistId).populate("videos", "title, description");
+        const playlist = await Playlist.findById(playlistId).populate("videos", "title description");
 
         if (!playlist) {
             throw new ApiError(404, "Playlist not found");
@@ -63,7 +63,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
             .status(200)
             .json(new ApiResponse(200, playlist, "Playlist fetched successfully"));
     } catch (error) {
-        throw new ApiError(500, error.message);
+        throw new ApiError(500, `Failed to fetch playlist: ${error.message}`);
     }
 });
 
@@ -91,7 +91,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
             .status(200)
             .json(new ApiResponse(200, playlist, "Video added to playlist successfully"));
     } catch (error) {
-        throw new ApiError(500, error.message);
+        throw new ApiError(500, `Failed to add video to playlist: ${error.message}`);
     }
 });
 
@@ -115,7 +115,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
             .status(200)
             .json(new ApiResponse(200, playlist, "Video removed from playlist successfully"));
     } catch (error) {
-        throw new ApiError(500, error.message);
+        throw new ApiError(500, `Failed to remove video from playlist: ${error.message}`);
     }
 });
 
@@ -136,7 +136,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
             .status(200)
             .json(new ApiResponse(200, playlist, "Playlist deleted successfully"));
     } catch (error) {
-        throw new ApiError(500, error.message);
+        throw new ApiError(500, `Failed to delete playlist: ${error.message}`);
     }
 });
 
@@ -167,7 +167,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
             .status(200)
             .json(new ApiResponse(200, updatedPlaylist, "Playlist updated successfully"));
     } catch (error) {
-        throw new ApiError(500, error.message);
+        throw new ApiError(500, `Failed to update playlist: ${error.message}`);
     }
 });
 
