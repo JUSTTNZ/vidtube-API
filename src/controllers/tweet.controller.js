@@ -112,8 +112,9 @@ const updateTweet =  asyncHandler(async(req, res) => {
         }
 
         const allTweet = [...oldTweetArray, updatedTweet] 
-        console.log("all tweet",allTweet);
+        console.log(allTweet);
         
+
         return res
             .status(200)
             .json(new ApiResponse(200, {oldTweet, updatedTweet}, "Tweet updated successfully"))

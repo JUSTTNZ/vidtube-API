@@ -56,7 +56,23 @@ const userSchema = new Schema (
         },
         refreshToken: {
             type: String
-        }
+        },
+        subscribers: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "User"
+            }
+        ],
+        subscribedTo: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "User"
+            }
+        ],
+        subscribedChannelCount: {
+        type: Number,
+        default: 0,
+    },
     },
     { timestamps: true }
 )

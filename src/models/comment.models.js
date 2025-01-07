@@ -12,10 +12,23 @@ const commentSchema = new Schema (
             type: Schema.Types.ObjectId,
             ref: "Video",
         },
+        likes: {
+            type: Number,
+            default: 0
+        },
         owner: {
             type: Schema.Types.ObjectId,
             ref: "User"
-        }
+        },
+        oldComments: [
+            {
+                content: String,
+                updatedAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ],
     },
     { timestamps: true } 
 )
