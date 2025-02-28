@@ -178,7 +178,7 @@ const deleteComment = asyncHandler(async(req, res) => {
             throw new ApiError(404, "Comment not found")
         }
 
-        // await comment.remove()
+        
 
         return res
             .status(200)
